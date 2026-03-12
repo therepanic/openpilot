@@ -225,7 +225,6 @@ class GuiApplication:
     self._window_close_requested = False
     self._nav_stack: list[object] = []
     self._nav_stack_ticks: list[Callable[[], None]] = []
-    self._nav_stack_widgets_to_render = 1 if self.big_ui() else 2
 
     self._mouse = MouseState(self._scale)
     self._mouse_events: list[MouseEvent] = []
@@ -384,7 +383,9 @@ class GuiApplication:
     if len(self._nav_stack) > 0:
       prev_widget = self._nav_stack[-1]
       # TODO: change these to touch_valid
+      prev_widget.hide_event()
       prev_widget.set_enabled(False)
+      prev_widget.set_visible(False)
 
     self._nav_stack.append(widget)
     widget.show_event()
@@ -404,7 +405,9 @@ class GuiApplication:
     # only re-enable previous widget if popping top widget
     if idx_to_pop == len(self._nav_stack) - 1:
       prev_widget = self._nav_stack[idx_to_pop - 1]
+      prev_widget.show_event()
       prev_widget.set_enabled(True)
+      prev_widget.set_visible(True)
 
     widget = self._nav_stack.pop(idx_to_pop)
     widget.hide_event()
@@ -612,8 +615,8 @@ class GuiApplication:
         for tick in self._nav_stack_ticks:
           tick()
 
-        # Only render top widgets
-        for widget in self._nav_stack[-self._nav_stack_widgets_to_render:]:
+        # Render all widgets
+        for widget in self._nav_stack:
           widget.render(rl.Rectangle(0, 0, self.width, self.height))
 
         yield True
