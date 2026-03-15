@@ -43,6 +43,7 @@ class Widget(abc.ABC):
     self._click_callback: Callable[[], None] | None = None
     self._multi_touch = False
     self.__was_awake = True
+    self._allow_update_state = True
 
   @property
   def rect(self) -> rl.Rectangle:
@@ -107,7 +108,8 @@ class Widget(abc.ABC):
     if rect is not None:
       self.set_rect(rect)
 
-    self._update_state()
+    if (self._allow_update_state):
+      self._update_state()
 
     if self._click_release_time is not None and rl.get_time() >= self._click_release_time:
       self._click_release_time = None
