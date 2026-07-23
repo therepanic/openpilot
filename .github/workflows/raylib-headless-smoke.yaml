@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ca-certificates build-essential curl libcurl4-openssl-dev \
-            locales git xclip wl-clipboard
+            locales git xclip wl-clipboard libegl1 libgles2
           ldconfig -p 2>/dev/null | grep -E 'lib(atomic|EGL|GLESv2)\.so'
 
       - name: Load comma-deps-raylib
@@ -65,35 +65,35 @@ jobs:
           - name: Ubuntu 24.04 (apt)
             image: ubuntu:24.04
             bootstrap: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash python3 python3-pip ca-certificates build-essential curl libcurl4-openssl-dev locales git xclip wl-clipboard
-            runtime: "true"
+            runtime: apt-get install -y --no-install-recommends libegl1 libgles2
           - name: Debian 13 (apt)
             image: debian:13
             bootstrap: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash python3 python3-pip ca-certificates build-essential curl libcurl4-openssl-dev locales git xclip wl-clipboard
-            runtime: "true"
+            runtime: apt-get install -y --no-install-recommends libegl1 libgles2
           - name: Fedora 44 (dnf)
             image: fedora:44
             bootstrap: dnf install -y bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-langpack-en git
-            runtime: "true"
+            runtime: dnf install -y libglvnd-egl libglvnd-gles
           - name: Rocky Linux 10 (yum)
             image: rockylinux/rockylinux:10
             bootstrap: yum install -y bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-langpack-en git
-            runtime: "true"
+            runtime: yum install -y libatomic libglvnd-egl libglvnd-gles
           - name: Arch Linux (pacman)
             image: archlinux:latest
             bootstrap: pacman -Syu --noconfirm --needed bash python python-pip base-devel ca-certificates curl git
-            runtime: "true"
+            runtime: pacman -S --noconfirm --needed libglvnd
           - name: openSUSE Tumbleweed (zypper)
             image: opensuse/tumbleweed:latest
             bootstrap: zypper --non-interactive refresh && zypper --non-interactive install bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-locale git
-            runtime: "true"
+            runtime: zypper --non-interactive install libglvnd
           - name: Wolfi (apk/glibc)
             image: cgr.dev/chainguard/wolfi-base:latest
             bootstrap: apk add --no-cache bash python-3.12 py3.12-pip ca-certificates build-base curl curl-dev git
-            runtime: "true"
+            runtime: apk add --no-cache "so:libEGL.so.1" "so:libGLESv2.so.2"
           - name: Void Linux (xbps/glibc)
             image: ghcr.io/void-linux/void-glibc:latest
             bootstrap: xbps-install -Syu xbps && xbps-install -Syu bash python3 python3-pip base-devel ca-certificates curl git libcurl-devel glibc-locales
-            runtime: "true"
+            runtime: xbps-install -Syu libglvnd
 
     steps:
       - name: Install Python
