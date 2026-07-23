@@ -38,6 +38,11 @@ function install_linux_deps() {
     fi
   done
 
+  # comma-deps-raylib's headless backend links against GLES
+  if command -v apt-get > /dev/null 2>&1 && ! ldconfig -p 2>/dev/null | grep -q 'libGLESv2\.so\.2'; then
+    missing_linux_deps=1
+  fi
+
   # normal stuff, this mostly for bare docker images
   if [[ "$missing_linux_deps" -eq 0 ]]; then
     # the native package managers are slow, so skip if we can

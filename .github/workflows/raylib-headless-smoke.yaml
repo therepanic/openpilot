@@ -1,0 +1,139 @@
+name: raylib headless smoke test
+
+on:
+  push:
+    branches-ignore:
+      - master
+  workflow_dispatch:
+
+env:
+  RAYLIB_VERSION: 6.0.0.1.post93
+
+jobs:
+  github_ubuntu:
+    name: GitHub-hosted Ubuntu 24.04
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Show environment
+        run: |
+          cat /etc/os-release
+          ldconfig -p 2>/dev/null | grep -E 'lib(EGL|GLESv2)\.so' || true
+
+      - name: Install raylib system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates build-essential curl libcurl4-openssl-dev \
+            locales git xclip wl-clipboard
+          ldconfig -p 2>/dev/null | grep -E 'lib(atomic|EGL|GLESv2)\.so'
+
+      - name: Load comma-deps-raylib
+        run: |
+          set +e
+          python3 -m pip install --no-cache-dir --target /tmp/raylib \
+            "comma-deps-raylib==$RAYLIB_VERSION"
+          install_status=$?
+
+          echo "pip install exit status: $install_status"
+          echo "headless extension linkage:"
+          for extension in /tmp/raylib/raylib/_raylib_cffi_headless*.so; do
+            [ -e "$extension" ] || continue
+            echo "$extension"
+            ldd "$extension" 2>&1 || true
+          done
+
+          PYTHONPATH=/tmp/raylib RAYLIB_BACKEND=headless \
+            python3 -c 'import pyray; print("raylib headless import OK")'
+          import_status=$?
+          echo "raylib import exit status: $import_status"
+
+          if [ "$install_status" -ne 0 ]; then
+            exit "$install_status"
+          fi
+          exit "$import_status"
+
+  clean_distros:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04 (apt)
+            image: ubuntu:24.04
+            bootstrap: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash python3 python3-pip ca-certificates build-essential curl libcurl4-openssl-dev locales git xclip wl-clipboard
+            runtime: "true"
+          - name: Debian 13 (apt)
+            image: debian:13
+            bootstrap: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends bash python3 python3-pip ca-certificates build-essential curl libcurl4-openssl-dev locales git xclip wl-clipboard
+            runtime: "true"
+          - name: Fedora 44 (dnf)
+            image: fedora:44
+            bootstrap: dnf install -y bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-langpack-en git
+            runtime: "true"
+          - name: Rocky Linux 10 (yum)
+            image: rockylinux/rockylinux:10
+            bootstrap: yum install -y bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-langpack-en git
+            runtime: "true"
+          - name: Arch Linux (pacman)
+            image: archlinux:latest
+            bootstrap: pacman -Syu --noconfirm --needed bash python python-pip base-devel ca-certificates curl git
+            runtime: "true"
+          - name: openSUSE Tumbleweed (zypper)
+            image: opensuse/tumbleweed:latest
+            bootstrap: zypper --non-interactive refresh && zypper --non-interactive install bash python3 python3-pip ca-certificates gcc gcc-c++ make curl libcurl-devel glibc-locale git
+            runtime: "true"
+          - name: Wolfi (apk/glibc)
+            image: cgr.dev/chainguard/wolfi-base:latest
+            bootstrap: apk add --no-cache bash python-3.12 py3.12-pip ca-certificates build-base curl curl-dev git
+            runtime: "true"
+          - name: Void Linux (xbps/glibc)
+            image: ghcr.io/void-linux/void-glibc:latest
+            bootstrap: xbps-install -Syu xbps && xbps-install -Syu bash python3 python3-pip base-devel ca-certificates curl git libcurl-devel glibc-locales
+            runtime: "true"
+
+    steps:
+      - name: Install Python
+        run: ${{ matrix.bootstrap }}
+
+      - name: Show environment
+        shell: bash
+        run: |
+          cat /etc/os-release
+          if command -v ldconfig > /dev/null 2>&1; then
+            ldconfig -p 2>/dev/null | grep -E 'lib(EGL|GLESv2)\.so' || true
+          else
+            echo "ldconfig is unavailable"
+          fi
+
+      - name: Install raylib system libraries
+        run: ${{ matrix.runtime }}
+
+      - name: Install comma-deps-raylib
+        shell: bash
+        run: |
+          set +e
+          python3 -m pip install --no-cache-dir --target /tmp/raylib \
+            "comma-deps-raylib==$RAYLIB_VERSION"
+          install_status=$?
+
+          echo "pip install exit status: $install_status"
+          echo "headless extension linkage:"
+          for extension in /tmp/raylib/raylib/_raylib_cffi_headless*.so; do
+            [ -e "$extension" ] || continue
+            echo "$extension"
+            ldd "$extension" 2>&1 || true
+          done
+
+          PYTHONPATH=/tmp/raylib RAYLIB_BACKEND=headless \
+            python3 -c 'import pyray; print("raylib headless import OK")'
+          import_status=$?
+          echo "raylib import exit status: $import_status"
+
+          if [ "$install_status" -ne 0 ]; then
+            exit "$install_status"
+          fi
+          exit "$import_status"
